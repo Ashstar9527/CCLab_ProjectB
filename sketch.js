@@ -66,6 +66,7 @@ class SolarSystem {
   }
 
   storeArc() {
+    this.points = [];
     let c1 = this.theme.c1;
     let c2 = this.theme.c2;
     let c3 = this.theme.c3;
@@ -126,6 +127,21 @@ class SolarSystem {
         });
       }
       this.midArcs.push({ color: c, arcs: arcs }); //record color and arcs segments
+
+      // Add points
+      c.setAlpha(155 + 100 * random(-1, 1));
+      let numPts = floor(random(8, 16));
+      let dots = [];
+      let k = 0;
+      for (let j = 0; j < numPts; j++) {
+        let span = TWO_PI / numPts;
+        dots.push({
+          ang: random(k, k + span),
+          dir: random(-1, 1)
+        })
+        k += span;
+      }
+      this.points.push({color: c, dots: dots});
     }
 
     // Front arcs
@@ -184,7 +200,7 @@ class SolarSystem {
 
     // mid arcs
     noFill();
-    strokeWeight(R / (this.midArcs.length + 1));
+    strokeWeight(R / (this.midArcs.length + 2 ));
     for (let i = 0; i < this.midArcs.length; i++) {
       let layer = this.midArcs[i];
       let r = R * (1 - i / (this.midArcs.length + 1));
@@ -212,6 +228,18 @@ class SolarSystem {
         let a = layer.arcs[j];
         stroke(layer.color);
         arc(0, 0, r * 2, r * 2, a.start + spin * a.dir, a.end + spin * a.dir);
+      }
+    }
+
+    noStroke();
+    for (let i = 0; i < this.points.length; i++) {
+      let layer = this.points[i];
+      let r = R * (1 - i / (this.points.length + 1));
+      let spin = (frameCount / 200) * (1.5 + (1 - i / this.points.length) / 2);
+      fill(layer.color);
+      for (let d of layer.dots) {
+        let a = d.ang + spin * d.dir;
+        circle(r * cos(a), r * sin(a), 3);
       }
     }
   }
