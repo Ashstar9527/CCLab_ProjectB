@@ -73,7 +73,7 @@ function updateJump() {
   if (jumpPhase == "wind") {
     let e = t * t * t;
     sysScale = 1 + 0.08 * e;
-    sp = lerp(1, 9, e);
+    sp = lerp(1, 10, e);
     fade = 0;
     twist = 0;
 
@@ -85,7 +85,7 @@ function updateJump() {
       e = 1 - pow(-2*t+2, 3) / 2;
     }
     sysScale = lerp(1.1, 0.78, e);
-    sp = lerp(9, 14, e);
+    sp = lerp(10, 14, e);
     fade = e * e;
     twist = sin(PI * t);
 
