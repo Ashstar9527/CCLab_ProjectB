@@ -7,8 +7,24 @@
 
 */
 let systems = []; // hold solar systems
-let current = 0; // the current displayed system
 let ashes = [];
+
+// Space jump animation set up
+let jumpPhase = "idle";
+let jumpFrame = 0;
+let jumpOrder = ["wind", "twist", "unwind", "settle", "idle"];
+let jumpLen = {
+  wind: 30, twist: 22, unwind: 26, settle: 24
+} // dictionary
+
+let sp = 1; //multiplier into arc rotation
+let twist = 0; //0 - no warp, 1 - full
+let fade = 0; //transition btw two systems
+let next = 0; // the next to play
+let current = 0; // the current displayed system
+
+let spinAcc = 0; //replace frameCount as acceleration
+
 
 function setup() {
   createCanvas(1280, 720); //16:9
@@ -22,9 +38,14 @@ function setup() {
 }
 
 function draw() {
-  background(0);
+  updateJump();
+  spinAcc += sp;
+  background(systems[current].theme.bg);
   drawGrid();
-  systems[current].update();
+
+  if (fade < 0.999) systems[current].update(1-fade);
+  if (fade > 0.001) systems[next].update(fade);
+
   push();
   translate(width/2, height/2);
   for (let a of ashes) {
@@ -32,14 +53,67 @@ function draw() {
     a.display();
   }
   pop();
-  drawBlink();
 }
 
+let sysScale = 1; // zoom in/out effect
 
+function updateJump() {
+  if (jumpPhase == "idle") {
+    sysScale = lerp(sysScale, 1, 0.2);
+    sp = lerp(sp, 1, 0.15);
+    fade = 0;
+    twist = 0;
+    if (current != next) {current = next};
+    return;
+  }
+
+  let d = jumpLen[jumpPhase]; //time one 'phase' would last
+  let t = constrain(jumpFrame / d, 0, 1); //progress parameter, from drawBlink();
+
+  if (jumpPhase == "wind") {
+    let e = t * t * t;
+    sysScale = 1 + 0.08 * e;
+    sp = lerp(1, 9, e);
+    fade = 0;
+    twist = 0;
+
+  } else if (jumpPhase == "twist") {
+    let e; // a function a++ till middle and a-- later
+    if (t < 0.5) {
+      e = 4 * t * t * t;
+    } else {
+      e = 1 - pow(-2*t+2, 3) / 2;
+    }
+    sysScale = lerp(1.1, 0.78, e);
+    sp = lerp(9, 14, e);
+    fade = e * e;
+    twist = sin(PI * t);
+
+  } else if (jumpPhase == "unwind") {
+    let e = 1 - pow(1-t, 3);
+    sysScale = lerp(0.78, 1.1, e);
+    sp = lerp(14, 5, e);
+    fade = 1;
+    twist = lerp(1, 0, e);
+
+  } else if (jumpPhase == "settle") {
+    let e = 1 - pow(1-t, 3);
+    sysScale = lerp(1.1, 1, e);
+    sp = lerp(5, 1, e);
+    twist = 0;
+    fade = 1;
+  }
+
+  jumpFrame++;
+  if (jumpFrame >= d) {
+    jumpFrame = 0;
+    jumpPhase = jumpOrder[jumpOrder.indexOf(jumpPhase) + 1];
+    if (jumpPhase == "unwind") {current = next};
+  }
+} 
 
 function makeTheme() {
   colorMode(HSL, 360, 100, 100);  
-  let h = random(360);
   let h1 = random(360);
   //Randonize direction
   let dir;
@@ -52,7 +126,8 @@ function makeTheme() {
     c1: color(h1, 60 + random(-8, 8), 12+random(-3,4)),
     c2: color(h2, 70 + random(-8, 10), 40 + random(-4, 6)),
     c3: color(h3, 85 + random(-8,6), 74+random(-5,5)),
-    c4: color(h4, 80 + random(-8,8), 96+random(-2, 2)) 
+    c4: color(h4, 80 + random(-8,8), 96+random(-2, 2)),
+    bg: color(h1, 35, 5)
   };
 
   colorMode(RGB, 255);  
@@ -129,7 +204,7 @@ class SolarSystem {
       this.midArcs.push({ color: c, arcs: arcs }); //record color and arcs segments
 
       // Add points
-      c.setAlpha(155 + 100 * random(-1, 1));
+      c.setAlpha(155 + 0 * random(-1, 1));
       let numPts = floor(random(8, 16));
       let dots = [];
       let k = 0;
@@ -190,11 +265,12 @@ class SolarSystem {
     }
   }
 
-  drawArcs(R) {
+  drawArcs(R, al) {
     //Circles first, from large to small
     noStroke();
     for (let i = 0; i < this.bgCircles.length; i++) {
-      fill(this.bgCircles[i]);
+      let c = this.bgCircles[i]; // translate back to add a;
+      fill(red(c), green(c), blue(c), alpha(c) * al);
       circle(0, 0, R * 2 * (1 - i / (this.bgCircles.length + 1)));
     }
 
@@ -204,12 +280,13 @@ class SolarSystem {
     for (let i = 0; i < this.midArcs.length; i++) {
       let layer = this.midArcs[i];
       let r = R * (1 - i / (this.midArcs.length + 1));
-      let spin = (frameCount / 800) * (1.5 + (1 - i / this.midArcs.length));
+      let spin = (spinAcc / 800) * (1.5 + (1 - i / this.midArcs.length));
 
       //Each seg
       for (let j = 0; j < layer.arcs.length; j++) {
         let a = layer.arcs[j];
-        stroke(layer.color);
+        let c = layer.color; // translate back to add a;
+        stroke(red(c), green(c), blue(c), alpha(c) * al);
         arc(0, 0, r * 2, r * 2, a.start + spin * a.dir, a.end + spin * a.dir);
       }
     }
@@ -220,13 +297,14 @@ class SolarSystem {
       let layer = this.frontArcs[i];
       let r = R * (1 - i / (this.frontArcs.length + 1));
       let spin =
-        (frameCount / 200) * (1.5 + (1 - i / this.frontArcs.length) / 2);
+        (spinAcc / 200) * (1.5 + (1 - i / this.frontArcs.length) / 2);
       
 
       //Each seg
       for (let j = 0; j < layer.arcs.length; j++) {
         let a = layer.arcs[j];
-        stroke(layer.color);
+        let c = layer.color; // translate back to add a;
+        stroke(red(c), green(c), blue(c), alpha(c) * al);
         arc(0, 0, r * 2, r * 2, a.start + spin * a.dir, a.end + spin * a.dir);
       }
     }
@@ -235,8 +313,9 @@ class SolarSystem {
     for (let i = 0; i < this.points.length; i++) {
       let layer = this.points[i];
       let r = R * (1 - i / (this.points.length + 1));
-      let spin = (frameCount / 200) * (1.5 + (1 - i / this.points.length) / 2);
-      fill(layer.color);
+      let spin = (spinAcc / 200) * (1.5 + (1 - i / this.points.length) / 2);
+      let c = layer.color; // translate back to add a;
+        fill(red(c), green(c), blue(c), alpha(c) * al);
       for (let d of layer.dots) {
         let a = d.ang + spin * d.dir;
         circle(r * cos(a), r * sin(a), 3);
@@ -244,49 +323,24 @@ class SolarSystem {
     }
   }
 
-  update() {
+  update(al) {
+    if (al == undefined) {a = 1};
     let R = height * 0.4;
     push();
     translate(width / 2, height / 2);
-    scale(1, -1);
-    this.drawArcs(R);
+    scale(sysScale, -sysScale); //Zooms during jump
+    this.drawArcs(R, al);
     pop();
   }
 }
 
 function keyPressed() {
   // Switch 'windows'
-  if (key == " ") {
-    blink++;
+  if (key == " " && jumpPhase == "idle") {
+    jumpPhase = "wind";
+    jumpFrame = 0;
+    next = (current + 1) % systems.length;
   }
-}
-
-let blink = 0;
-let blinkDir = 0;
-let blinkPro = 0;
-function drawBlink() {
-  if (blink > 0 && blinkDir == 0) {
-    blinkDir = 1;
-    blink = 0;
-  }
-  if (blinkDir == 1) {
-    blinkPro += 0.06;
-    if (blinkPro >= 1.0) {
-      blinkDir = -1;
-      current = (current + 1) % systems.length; 
-    }
-  } else if (blinkDir == -1) {
-    blinkPro -= 0.06;
-    if (blinkPro <= 0) {
-      blinkDir = 0;
-      return;
-    }
-  }
-  let lidY = blinkPro * (height / 2);
-  noStroke();
-  fill(0, 0, 0, 255);
-  rect(0, 0, width, lidY);
-  rect(0, height - lidY, width, lidY);
 }
 
 // Star field
@@ -296,7 +350,7 @@ function drawGrid() {
   push();
   colorMode(HSB, 360, 100, 100);  
   translate(width / 2, height / 2);
-  rotate(radians(frameCount / 40));
+  rotate(radians(spinAcc / 40));
   translate(-width / 2, -height / 2)
 
   let starColor = systems[current].theme.c4;
