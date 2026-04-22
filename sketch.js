@@ -55,6 +55,84 @@ function draw() {
   pop();
 }
 
+class Planet {
+  constructor(theme, R) {
+    this.theme = theme;
+    this.r = random(R * 0.5, R * 1.25);
+    this.ang = random(TWO_PI);
+    this.speed = random(0.002, 0.008);
+    //vari direction
+    if (random(1) < 0.5) {
+      this.speed *= -1;
+    } 
+    this.tilt = random(0.3, 1);
+    this.size = random(10, 25)
+
+    this.colGradient = random(0.25, 0.75)
+  }
+
+  update() {
+    this.ang += this.speed * sp;
+  };
+
+  position() { //imitate 3D depth
+    let p = {
+      x: cos(this.ang) * this.r,
+      y: sin(this.ang) * this.r * this.tilt,
+      z: sin(this.ang) //z > 0 if front, <0 if back
+    } 
+    return p;
+  }
+
+  display(al, R) {
+    //Get coordinates
+    let p = this.position();
+    //Extract theme colors
+    let c1 = this.theme.c1;
+    let c2 = this.theme.c2;
+    let c3 = this.theme.c3;
+    let c4 = this.theme.c4;
+
+    // Selecting color over the theme
+    let col;
+    if (this.colGradient < 0.33) {
+      col = lerpColor(c1, c2, this.colGradient * 3);
+    } else if (this.colGradient < 0.67) {
+      col = lerpColor(c2, c3, (this.colGradient - 0.33)* 3);
+    } else {
+      col = lerpColor(c3, c4, (this.colGradient - 0.67) * 3);
+    }
+
+    // Adding shades and bright side
+    let shadow = lerpColor(col, c1, 0.75);
+    let lit = lerpColor(col, c4, 0.4)
+    let numSlices = 80;
+    let lightAng = atan2(p.y, p.x);
+
+    //Size on the ellipse orbit scale
+    let depthScale = map(this.r, R * 0.5, R * 1.5, 1.1, 0.8);
+    let shift = this.size * depthScale * 0.3;
+
+
+    push();
+    translate(p.x, p.y);
+    rotate(lightAng);
+
+    noStroke();
+    for (let i = 0; i < numSlices; i++) {
+      let j = i / (numSlices-1);
+      push();
+      translate(shift * j * 0.5, 0); // shift each slice outward;
+      let c = lerpColor(lit, shadow, j);
+      c.setAlpha(al * 25) //al adjust for transition
+      fill(c);
+      circle(0, 0, this.size * depthScale - j * shift);
+      pop();
+    }
+    pop();
+  }
+}
+
 let sysScale = 1; // zoom in/out effect
 
 function updateJump() {
@@ -128,7 +206,7 @@ function makeTheme() {
     c3: color(h3, 85 + random(-8,6), 74+random(-5,5)),
     c4: color(h4, 80 + random(-8,8), 96+random(-2, 2)),
     bg: color(h1, 35, 5)
-  };
+  }; // Use the properties of an 'object' to store the values.
 
   colorMode(RGB, 255);  
   return theme;
@@ -138,6 +216,10 @@ class SolarSystem {
   constructor() {
     this.theme = makeTheme(); //create color palette
     this.storeArc();
+    this.planets = [];
+    for (let i = 0; i < floor(random(3, 6)); i++) {
+      this.planets.push(new Planet(this.theme, height/4))
+    }
   }
 
   storeArc() {
@@ -324,12 +406,22 @@ class SolarSystem {
   }
 
   update(al) {
-    if (al == undefined) {a = 1};
+    if (al == undefined) {al = 1};
     let R = height * 0.4;
     push();
     translate(width / 2, height / 2);
     scale(sysScale, -sysScale); //Zooms during jump
+
+    // planets in and out
+    for (let p of this.planets) {
+      p.update();
+      if (p.position().z <= 0) p.display(al, R);
+    }
     this.drawArcs(R, al);
+
+    for (let p of this.planets) {
+      if (p.position().z > 0) p.display(al, R);
+    }
     pop();
   }
 }
