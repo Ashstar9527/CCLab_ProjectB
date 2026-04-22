@@ -388,13 +388,14 @@ class SolarSystem {
       }
     }
 
+    // Draw points
     noStroke();
     for (let i = 0; i < this.points.length; i++) {
       let layer = this.points[i];
       let r = R * (1 - i / (this.points.length + 1));
       let spin = (spinAcc / 200) * (1.5 + (1 - i / this.points.length) / 2);
       let c = layer.color; // translate back to add a;
-        fill(red(c), green(c), blue(c), alpha(c) * al);
+        fill(red(c), green(c), blue(c), alpha(c) * al * 1.2);
       for (let d of layer.dots) {
         let a = d.ang + spin * d.dir;
         circle(r * cos(a), r * sin(a), 3);
