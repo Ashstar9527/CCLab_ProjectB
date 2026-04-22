@@ -58,7 +58,7 @@ function draw() {
 class Planet {
   constructor(theme, R) {
     this.theme = theme;
-    this.r = random(R * 0.5, R * 1.25);
+    this.r = random(R * 0.5, R * 1.5);
     this.ang = random(TWO_PI);
     this.speed = random(0.002, 0.008);
     //vari direction
@@ -66,27 +66,21 @@ class Planet {
       this.speed *= -1;
     } 
     this.tilt = random(0.3, 1);
-    this.size = random(10, 25)
-
+    this.size = random(10, 50)
     this.colGradient = random(0.25, 0.75)
+
+    this.depth = random(0, 0.3);
+    this.texture = random(0.3, 0.7);
   }
 
   update() {
     this.ang += this.speed * sp;
   };
 
-  position() { //imitate 3D depth
-    let p = {
-      x: cos(this.ang) * this.r,
-      y: sin(this.ang) * this.r * this.tilt,
-      z: sin(this.ang) //z > 0 if front, <0 if back
-    } 
-    return p;
-  }
-
   display(al, R) {
     //Get coordinates
-    let p = this.position();
+    let x = cos(this.ang) * this.r;
+    let y = sin(this.ang) * this.r * this.tilt;
     //Extract theme colors
     let c1 = this.theme.c1;
     let c2 = this.theme.c2;
@@ -107,15 +101,14 @@ class Planet {
     let shadow = lerpColor(col, c1, 0.75);
     let lit = lerpColor(col, c4, 0.4)
     let numSlices = 80;
-    let lightAng = atan2(p.y, p.x);
+    let lightAng = atan2(y, x);
 
     //Size on the ellipse orbit scale
     let depthScale = map(this.r, R * 0.5, R * 1.5, 1.1, 0.8);
     let shift = this.size * depthScale * 0.3;
-
-
+     
     push();
-    translate(p.x, p.y);
+    translate(x, y);
     rotate(lightAng);
 
     noStroke();
@@ -123,7 +116,7 @@ class Planet {
       let j = i / (numSlices-1);
       push();
       translate(shift * j * 0.5, 0); // shift each slice outward;
-      let c = lerpColor(lit, shadow, j);
+      let c = lerpColor(lit, shadow, pow(j, this.texture) - this.depth);
       c.setAlpha(al * 25) //al adjust for transition
       fill(c);
       circle(0, 0, this.size * depthScale - j * shift);
@@ -150,8 +143,8 @@ function updateJump() {
 
   if (jumpPhase == "wind") {
     let e = t * t * t;
-    sysScale = 1 + 0.08 * e;
-    sp = lerp(1, 10, e);
+    sysScale = 1 + 0.06 * e;
+    sp = lerp(1, 9, e);
     fade = 0;
     twist = 0;
 
@@ -163,21 +156,21 @@ function updateJump() {
       e = 1 - pow(-2*t+2, 3) / 2;
     }
     sysScale = lerp(1.1, 0.78, e);
-    sp = lerp(10, 14, e);
+    sp = lerp(9, 14, e);
     fade = e * e;
     twist = sin(PI * t);
 
   } else if (jumpPhase == "unwind") {
     let e = 1 - pow(1-t, 3);
-    sysScale = lerp(0.78, 1.1, e);
-    sp = lerp(14, 5, e);
+    sysScale = lerp(0.78, 1.06, e);
+    sp = lerp(14, 3, e);
     fade = 1;
     twist = lerp(1, 0, e);
 
   } else if (jumpPhase == "settle") {
     let e = 1 - pow(1-t, 3);
-    sysScale = lerp(1.1, 1, e);
-    sp = lerp(5, 1, e);
+    sysScale = lerp(1.06, 1, e);
+    sp = lerp(3, 1, e);
     twist = 0;
     fade = 1;
   }
@@ -412,15 +405,11 @@ class SolarSystem {
     translate(width / 2, height / 2);
     scale(sysScale, -sysScale); //Zooms during jump
 
-    // planets in and out
-    for (let p of this.planets) {
-      p.update();
-      if (p.position().z <= 0) p.display(al, R);
-    }
     this.drawArcs(R, al);
 
     for (let p of this.planets) {
-      if (p.position().z > 0) p.display(al, R);
+      p.update();
+      p.display(al, R);
     }
     pop();
   }
