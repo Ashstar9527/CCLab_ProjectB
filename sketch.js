@@ -27,7 +27,7 @@ let spinAcc = 0; //replace frameCount as acceleration
 
 
 function setup() {
-  createCanvas(1280, 720); //16:9
+  createCanvas(windowWidth, windowHeight); 
   for (let i = 0; i < 5; i++) {
     systems.push(new SolarSystem()); // create 5 systems in advance.
   }
@@ -37,14 +37,18 @@ function setup() {
   }
 }
 
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight)
+}
+
 function draw() {
   updateJump();
   spinAcc += sp;
   background(systems[current].theme.bg);
-  drawGrid();
 
   if (fade < 0.999) systems[current].update(1-fade);
   if (fade > 0.001) systems[next].update(fade);
+  drawGrid();
 
   push();
   translate(width/2, height/2);
@@ -400,7 +404,7 @@ class SolarSystem {
 
   update(al) {
     if (al == undefined) {al = 1};
-    let R = height * 0.4;
+    let R = height * 0.45;
     push();
     translate(width / 2, height / 2);
     scale(sysScale, -sysScale); //Zooms during jump
@@ -427,11 +431,12 @@ function keyPressed() {
 // Star field
 let s = 30;
 
-function drawGrid() {
+function drawGrid() {   
   push();
   colorMode(HSB, 360, 100, 100);  
   translate(width / 2, height / 2);
-  rotate(radians(spinAcc / 40));
+  rotate(radians(spinAcc / 20 ));
+  
   translate(-width / 2, -height / 2)
 
   let starColor = systems[current].theme.c4;
@@ -446,7 +451,16 @@ function drawGrid() {
       let jy = noise(x * 0.3 + 200, y * 0.3 + 200) * s * 3;
       let cx = x + jx;
       let cy = y + jy;
+       // adding radiant transparency
+      let d = dist(cx, cy, width/2, height/2);
+      let edgeFade = map(d, 0, min(width, height) * 0.5, 0, 1);
+      let sc = color(starColor);
+      sc.setAlpha(edgeFade);
+      fill(sc);
+      noStroke()
+      if (d>= 100) {
       circle(cx, cy, r);
+    }
     }
   }
   
@@ -459,20 +473,21 @@ class Ash {
   constructor(init) {
     this.r = map(init, 0, 1, 40, width); //random starting to the center
     this.ang = random(TWO_PI); //random starting angle
-    this.size = random(2, 3.5);
-    this.speed = random(0.75, 1.25);
+    this.size = random(1, 3.5);
+    this.speed = random(0.5, 1.25);
     this.phase = random(TWO_PI); // offset to avoid flickering together
   }
 
   display() {
-    let opa = map(this.r, 0, width, 20, 100);
+    let opa = map(this.r, 0, width, 20, 80);
     let flicker = 1 + 0.3 * sin(frameCount * 0.05 + this.phase);
     noStroke();
     fill(255, 255, 255, opa * flicker);
 
     // Draw small triangles
     push();
-    translate(cos(this.ang) * this.r, sin(this.ang) * this.r);
+    translate(-cos(this.ang) * this.r, sin(this.ang) * this.r);
+
     rotate(this.ang); //outward
     let sz = this.size;
     triangle(0, -sz, -sz * 0.3, sz, sz * 0.9, sz);
@@ -480,8 +495,9 @@ class Ash {
   }
 
   update() {
-    this.r += 0.2 * this.speed;
-    this.ang += this.speed * 0.001;
+    this.r += 0.2 * this.speed * sp;
+    this.ang += this.speed * 0.001 * sp;
+    
     if (this.r > width) {
       this.r = random(0, 180);
       this.ang = random(TWO_PI);
