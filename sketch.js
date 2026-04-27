@@ -4,16 +4,18 @@ This is the formal version of Project B and why on earth is VS Code constantly s
 
 let systems = []; // hold solar systems
 let ashes = [];
+
 let bgSound; // Add space exploration bgm.
 let soundStarted = false;
+let jumpSound;
 
 // Space jump animation set up
 let jumpPhase = "idle";
 let jumpFrame = 0;
 let jumpOrder = ["wind", "twist", "unwind", "settle", "idle"];
 let jumpLen = {
-  wind: 30, twist: 22, unwind: 26, settle: 24
-} // dictionary
+  wind: 30, twist: 24, unwind: 36, settle: 26
+} // dictionary, adjusted for the sound effect
 
 let sp = 1; //multiplier into arc rotation
 let twist = 0; //0 - no warp, 1 - full
@@ -25,6 +27,7 @@ let spinAcc = 0; //replace frameCount as acceleration
 
 function preload() {
   bgSound = loadSound("assets/bgSound.mp3");
+  jumpSound = loadSound("assets/jumpSound.mp3");
 }
 
 function setup() {
@@ -37,6 +40,7 @@ function setup() {
     ashes.push(new Ash(random(1)));
   }
   bgSound.setVolume(0.5);
+  jumpSound.setVolume(0.6);
 }
 
 function windowResized() {
@@ -59,7 +63,88 @@ function draw() {
     a.display();
   }
   pop();
+
+  drawScan();
 }
+
+let scanX = 0;
+let scanY = 0;
+
+function drawScan() {
+  let breath = sin(frameCount / 40) * 4;
+  scanX = lerp(scanX, mouseX, 0.2);
+  scanY = lerp(scanY, mouseY, 0.2);
+  colorMode(RGB, 255);
+  noFill();
+  let sz = 40 + breath;
+  let c = systems[current].theme.c4;
+
+  stroke(c);
+  if (mouseIsPressed) {
+    strokeWeight(3 + 3 * twist);
+    sz = 50 + breath;
+  } else {
+    strokeWeight(2 + 3 * twist);
+  }
+  rect(scanX - sz/2, scanY - sz/2, sz, sz);
+}
+
+let sysScale = 1; // zoom in/out effect
+
+function updateJump() {
+  if (jumpPhase == "idle") {
+    sysScale = lerp(sysScale, 1, 0.2);
+    sp = lerp(sp, 1, 0.15);
+    fade = 0;
+    twist = 0;
+    if (current != next) {current = next};
+    return;
+  }
+
+  let d = jumpLen[jumpPhase]; //time one 'phase' would last
+  let t = constrain(jumpFrame / d, 0, 1); //progress parameter, from drawBlink();
+
+  if (jumpPhase == "wind") {
+    let e = t * t * t;
+    sysScale = 1 + 0.08 * e;
+    sp = lerp(1, 9, e);
+    fade = 0;
+    twist = 0;
+
+  } else if (jumpPhase == "twist") {
+    let e; // a function a++ till middle and a-- later
+    if (t < 0.5) {
+      e = 4 * t * t * t;
+    } else {
+      e = 1 - pow(-2*t+2, 3) / 2;
+    }
+    sysScale = lerp(1.12 , 0.78, e);
+    sp = lerp(9, 14, e);
+    fade = e * e;
+    twist = sin(PI * t);
+
+  } else if (jumpPhase == "unwind") {
+    let e = 1 - pow(1-t, 3);
+    sysScale = lerp(0.78, 1.06, e);
+    sp = lerp(14, 3, e);
+    fade = 1;
+    twist = lerp(1, 0, e);
+
+  } else if (jumpPhase == "settle") {
+    let e = 1 - pow(1-t, 3);
+    sysScale = lerp(1.06, 1, e);
+    sp = lerp(3, 1, e);
+    twist = 0;
+    fade = 1;
+  }
+
+  jumpFrame++;
+  if (jumpFrame >= d) {
+    jumpFrame = 0;
+    jumpPhase = jumpOrder[jumpOrder.indexOf(jumpPhase) + 1];
+    if (jumpPhase == "unwind") {current = next};
+  }
+}  
 
 class Planet {
   constructor(theme, R) {
@@ -131,63 +216,6 @@ class Planet {
     pop();
   }
 }
-
-let sysScale = 1; // zoom in/out effect
-
-function updateJump() {
-  if (jumpPhase == "idle") {
-    sysScale = lerp(sysScale, 1, 0.2);
-    sp = lerp(sp, 1, 0.15);
-    fade = 0;
-    twist = 0;
-    if (current != next) {current = next};
-    return;
-  }
-
-  let d = jumpLen[jumpPhase]; //time one 'phase' would last
-  let t = constrain(jumpFrame / d, 0, 1); //progress parameter, from drawBlink();
-
-  if (jumpPhase == "wind") {
-    let e = t * t * t;
-    sysScale = 1 + 0.06 * e;
-    sp = lerp(1, 9, e);
-    fade = 0;
-    twist = 0;
-
-  } else if (jumpPhase == "twist") {
-    let e; // a function a++ till middle and a-- later
-    if (t < 0.5) {
-      e = 4 * t * t * t;
-    } else {
-      e = 1 - pow(-2*t+2, 3) / 2;
-    }
-    sysScale = lerp(1.1, 0.78, e);
-    sp = lerp(9, 14, e);
-    fade = e * e;
-    twist = sin(PI * t);
-
-  } else if (jumpPhase == "unwind") {
-    let e = 1 - pow(1-t, 3);
-    sysScale = lerp(0.78, 1.06, e);
-    sp = lerp(14, 3, e);
-    fade = 1;
-    twist = lerp(1, 0, e);
-
-  } else if (jumpPhase == "settle") {
-    let e = 1 - pow(1-t, 3);
-    sysScale = lerp(1.06, 1, e);
-    sp = lerp(3, 1, e);
-    twist = 0;
-    fade = 1;
-  }
-
-  jumpFrame++;
-  if (jumpFrame >= d) {
-    jumpFrame = 0;
-    jumpPhase = jumpOrder[jumpOrder.indexOf(jumpPhase) + 1];
-    if (jumpPhase == "unwind") {current = next};
-  }
-} 
 
 function makeTheme() {
   colorMode(HSL, 360, 100, 100);  
@@ -428,6 +456,7 @@ function keyPressed() {
     jumpPhase = "wind";
     jumpFrame = 0;
     next = (current + 1) % systems.length;
+    jumpSound.play();
   }
 
   // Start bgm on first interaction
@@ -442,7 +471,6 @@ let s = 30;
 
 function drawGrid() {   
   push();
-  colorMode(HSB, 360, 100, 100);  
   translate(width / 2, height / 2);
   rotate(radians(spinAcc / 20 ));
   
