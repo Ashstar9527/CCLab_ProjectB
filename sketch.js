@@ -30,13 +30,10 @@ let spinAcc = 0; //replace frameCount as acceleration
 function preload() {
   bgSound = loadSound("assets/bgSound.mp3");
   jumpSound = loadSound("assets/jumpSound.mp3");
-  sunPieces = [
-    loadSound("assets/sunPieces/sunPiece1.mp3"),
-    loadSound("assets/sunPieces/sunPiece2.mp3"),
-    loadSound("assets/sunPieces/sunPiece3.mp3"),
-    loadSound("assets/sunPieces/sunPiece4.mp3"),
-    loadSound("assets/sunPieces/solarSystem.mp3")
-  ]
+  for (let i = 1; i <= 5; i++) {
+    let name = 'assets/sunPieces/sunPiece' + i + '.mp3';
+    sunPieces.push(loadSound(name));  
+  }
 }
 
 function setup() {
@@ -466,7 +463,7 @@ function keyPressed() {
     jumpFrame = 0;
     next = (current + 1) % systems.length;
     jumpSound.play();
-    sunPieces[current].stop();
+    fadingOut(sunPieces[current]);
     playingSunPiece = false;
   }
 
@@ -482,13 +479,22 @@ function mousePressed() {
   let d = dist(mouseX, mouseY, width/2, height/2);
   if (d < 50) {
     if (playingSunPiece) {
-      sunPieces[current].stop();
+      fadingOut(sunPieces[current]);
       playingSunPiece = false;
     } else {
-      sunPieces[current].play();
+      sunPieces[current].setVolume(1, 1);
+      sunPieces[current].loop();
       playingSunPiece = true;
-    }
+    } 
   }
+}
+
+// Fading out effects. By this point my laptop is hot enough to fry an egg.
+function fadingOut(piece) {
+  piece.setVolume(0, 1);
+  setTimeout(() => {
+    piece.stop();
+  }, 1000);
 }
 
 // Star field
