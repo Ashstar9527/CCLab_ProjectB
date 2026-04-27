@@ -4,12 +4,14 @@ This is the formal version of Project B and why on earth is VS Code constantly s
 
 let systems = []; // hold solar systems
 let ashes = [];
-
+// Sound effects
 let bgSound; // Add space exploration bgm.
 let soundStarted = false;
-let jumpSound;
+let jumpSound; // Space jump
 let sunPieces = [];
 let playingSunPiece = false;
+let scannerSound = [];
+let playingScanner = false;
 
 // Space jump animation set up
 let jumpPhase = "idle";
@@ -34,6 +36,10 @@ function preload() {
     let name = 'assets/sunPieces/sunPiece' + i + '.mp3';
     sunPieces.push(loadSound(name));  
   }
+  scannerSound = [
+    loadSound("assets/scanner1.mp3"),
+    loadSound("assets/scanner2.mp3")
+  ]
 }
 
 function setup() {
@@ -71,6 +77,13 @@ function draw() {
   pop();
 
   drawScan();
+  if (mouseIsPressed && !playingScanner) {
+    scannerSound[0].play();
+    playingScanner = true;
+  } else if (!mouseIsPressed && playingScanner) {
+    scannerSound[1].play();
+    playingScanner = false;
+  }
 }
 
 let scanX = 0;
