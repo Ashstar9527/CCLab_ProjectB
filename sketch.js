@@ -8,6 +8,8 @@ let ashes = [];
 let bgSound; // Add space exploration bgm.
 let soundStarted = false;
 let jumpSound;
+let sunPieces = [];
+let playingSunPiece = false;
 
 // Space jump animation set up
 let jumpPhase = "idle";
@@ -28,6 +30,13 @@ let spinAcc = 0; //replace frameCount as acceleration
 function preload() {
   bgSound = loadSound("assets/bgSound.mp3");
   jumpSound = loadSound("assets/jumpSound.mp3");
+  sunPieces = [
+    loadSound("assets/sunPieces/sunPiece1.mp3"),
+    loadSound("assets/sunPieces/sunPiece2.mp3"),
+    loadSound("assets/sunPieces/sunPiece3.mp3"),
+    loadSound("assets/sunPieces/sunPiece4.mp3"),
+    loadSound("assets/sunPieces/solarSystem.mp3")
+  ]
 }
 
 function setup() {
@@ -457,12 +466,28 @@ function keyPressed() {
     jumpFrame = 0;
     next = (current + 1) % systems.length;
     jumpSound.play();
+    sunPieces[current].stop();
+    playingSunPiece = false;
   }
 
   // Start bgm on first interaction
   if (!soundStarted) {
     bgSound.loop();
     soundStarted = true;
+  }
+}
+
+function mousePressed() {
+  // Play sun piece with clicking.
+  let d = dist(mouseX, mouseY, width/2, height/2);
+  if (d < 50) {
+    if (playingSunPiece) {
+      sunPieces[current].stop();
+      playingSunPiece = false;
+    } else {
+      sunPieces[current].play();
+      playingSunPiece = true;
+    }
   }
 }
 
