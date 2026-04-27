@@ -1,13 +1,11 @@
-/* Functions I wanted to realize in prototype:
-1. Press space and switch observation window to a new solar system
-
-2. Nebula/Solar system view, the most colorful type
-
-3. Planets in shade. Textures and rendering are not ready, but we want to have their orbits already.
-
+/*
+This is the formal version of Project B and why on earth is VS Code constantly suggesting AI written comment???
 */
+
 let systems = []; // hold solar systems
 let ashes = [];
+let bgSound; // Add space exploration bgm.
+let soundStarted = false;
 
 // Space jump animation set up
 let jumpPhase = "idle";
@@ -25,6 +23,9 @@ let current = 0; // the current displayed system
 
 let spinAcc = 0; //replace frameCount as acceleration
 
+function preload() {
+  bgSound = loadSound("assets/bgSound.mp3");
+}
 
 function setup() {
   createCanvas(windowWidth, windowHeight); 
@@ -35,6 +36,7 @@ function setup() {
   for (let i = 0; i < 200; i++) {
     ashes.push(new Ash(random(1)));
   }
+  bgSound.setVolume(0.5);
 }
 
 function windowResized() {
@@ -426,6 +428,12 @@ function keyPressed() {
     jumpPhase = "wind";
     jumpFrame = 0;
     next = (current + 1) % systems.length;
+  }
+
+  // Start bgm on first interaction
+  if (!soundStarted) {
+    bgSound.loop();
+    soundStarted = true;
   }
 }
 
